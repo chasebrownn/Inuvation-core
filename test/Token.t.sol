@@ -4,9 +4,7 @@ pragma solidity ^0.8.6;
 import "../lib/forge-std/src/Test.sol";
 import "./Utility.sol";
 import { Inuvation } from "../src/Token.sol";
-
-import { IUniswapV2Router02, IUniswapV2Pair, IUniswapV2Router01, IWETH, IERC20 } from "../src/interfaces/Interfaces.sol";
-//import { IGogeERC20 } from "../src/extensions/IGogeERC20.sol";
+import { IUniswapV2Router02, IUniswapV2Pair, IUniswapV2Router01, IERC20 } from "../src/interfaces/Interfaces.sol";
 
 contract TokenTest is Utility, Test {
     Inuvation inuvationToken;
