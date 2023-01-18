@@ -9,7 +9,7 @@ import { IUniswapV2Router02, IUniswapV2Pair, IUniswapV2Router01, IERC20 } from "
 contract TokenTest is Utility, Test {
     Inuvation inuvationToken;
 
-    address UNIV2_ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address constant UNIV2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
 
     function setUp() public {
         createActors();
@@ -23,272 +23,303 @@ contract TokenTest is Utility, Test {
             address(tim)
         );
 
-        // Give tokens and ownership to dev.
-        //inuvationToken.transfer(address(dev), 100_000_000_000 ether);
-        //inuvationToken._transferOwnership(address(dev));
+        uint WETH_DEPOSIT = 5 ether;
+        uint TOKEN_DEPOSIT = 55_000_000 * NIN;
 
-        // enable trading.
-        //assert(dev.try_enableTrading(address(inuvationToken)));
+        deal(WETH, address(this), WETH_DEPOSIT);
+
+        // Approve TaxToken for UniswapV2Router.
+        IERC20(address(inuvationToken)).approve(
+            address(UNIV2_ROUTER), TOKEN_DEPOSIT
+        );
+
+        // Create liquidity pool.
+        // https://docs.uniswap.org/protocol/V2/reference/smart-contracts/router-02#addliquidityeth
+        // NOTE: ETH_DEPOSIT = The amount of ETH to add as liquidity if the token/WETH price is <= amountTokenDesired/msg.value (WETH depreciates).
+        IUniswapV2Router01(UNIV2_ROUTER).addLiquidityETH{value: 100 ether}(
+            address(inuvationToken),    // A pool token.
+            TOKEN_DEPOSIT,              // The amount of token to add as liquidity if the WETH/token price is <= msg.value/amountTokenDesired (token depreciates).
+            TOKEN_DEPOSIT,              // Bounds the extent to which the WETH/token price can go up before the transaction reverts. Must be <= amountTokenDesired.
+            WETH_DEPOSIT,               // Bounds the extent to which the token/WETH price can go up before the transaction reverts. Must be <= msg.value.
+            address(this),              // Recipient of the liquidity tokens.
+            block.timestamp + 300       // Unix timestamp after which the transaction will revert.
+        );
+
+        inuvationToken.enableTrading();
     }
 
-    // // Initial state test.
-    // function test_gogeToken_init_state() public {
-    //     assertEq(gogeToken.marketingWallet(), address(1));
-    //     assertEq(gogeToken.teamWallet(),      address(2));
-    //     assertEq(gogeToken.totalSupply(),     100_000_000_000 ether);
-    //     assertEq(gogeToken.balanceOf(address(dev)), 100_000_000_000 ether);
-    //     assertEq(gogeToken.owner(), address(dev));
-    //     assertEq(gogeToken.GogeV1(), 0xa30D02C5CdB6a76e47EA0D65f369FD39618541Fe);
 
-    //     assertEq(cakeTracker.excludedFromDividends(address(cakeTracker)),                 true);
-    //     assertEq(cakeTracker.excludedFromDividends(address(gogeToken)),                   true);
-    //     assertEq(cakeTracker.excludedFromDividends(address(gogeToken.uniswapV2Router())), true);
-    //     assertEq(cakeTracker.excludedFromDividends(gogeToken.DEAD_ADDRESS()),             true);
-    //     assertEq(cakeTracker.excludedFromDividends(address(0)),                           true);
-    //     assertEq(cakeTracker.excludedFromDividends(gogeToken.owner()),                    true);
-    //     assertEq(cakeTracker.excludedFromDividends(gogeToken.devWallet()),                true);
-    //     assertEq(cakeTracker.excludedFromDividends(gogeToken.marketingWallet()),          true);
-    //     assertEq(cakeTracker.excludedFromDividends(gogeToken.teamWallet()),               true);
+    // ~~ Utility ~~
 
-    //     assertEq(gogeToken.isExcludedFromFees(gogeToken.marketingWallet()), true);
-    //     assertEq(gogeToken.isExcludedFromFees(gogeToken.teamWallet()),      true);
-    //     assertEq(gogeToken.isExcludedFromFees(gogeToken.devWallet()),       true);
-    //     assertEq(gogeToken.isExcludedFromFees(address(gogeToken)),          true);
-    //     assertEq(gogeToken.isExcludedFromFees(gogeToken.owner()),           true);
-    //     assertEq(gogeToken.isExcludedFromFees(gogeToken.DEAD_ADDRESS()),    true);
-    //     assertEq(gogeToken.isExcludedFromFees(address(0)),                  true);
 
-    //     assertEq(gogeToken.cakeDividendRewardsFee(), 10);
-    //     assertEq(gogeToken.marketingFee(),           2);
-    //     assertEq(gogeToken.buyBackFee(),             2);
-    //     assertEq(gogeToken.teamFee(),                2);
-    //     assertEq(gogeToken.marketingEnabled(),       true);
-    //     assertEq(gogeToken.buyBackEnabled(),         true);
-    //     assertEq(gogeToken.cakeDividendEnabled(),    true);
-    //     assertEq(gogeToken.teamEnabled(),            true);
-    //     assertEq(gogeToken.swapTokensAtAmount(),     20_000_000 ether);
+    // ~~ Utility Functions ~~
 
-    //     assertEq(gogeToken.tradingIsEnabled(), true);
-    //     assertEq(gogeToken._firstBlock(), block.timestamp);
-    // }
 
-    // // ~ Transfer Testing ~
+    // Return a quote of PROVE tokens for WETH
+    function get_quote_tokens(uint256 weth_amt) internal returns (uint256) {
+        // create path
+        address[] memory path = new address[](2);
+        path[0] = WETH;
+        path[1] = address(inuvationToken);
 
-    // // Whitelisted Transfer test -> no tax.
-    // function test_gogeToken_transfer_WL() public {
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 1_000_000 ether));
-    //     assertEq(gogeToken.balanceOf(address(joe)), 1_000_000 ether);
-    // }
+        // Get Quoted amount
+        uint[] memory amounts = IUniswapV2Router01(UNIV2_ROUTER).getAmountsOut( weth_amt, path );
 
-    // // ~ Blacklist Testing ~
+        // return amount
+        return amounts[1];
+    }
 
-    // // This tests blacklisting of the receiver.
-    // function test_gogeToken_blacklist_receiver() public {
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 100 ether));
+    // Return a quote of WETH for PROVE tokens
+    function get_quote_weth(uint256 token_amt) internal returns (uint256) {
+        // create path
+        address[] memory path = new address[](2);
+        path[0] = address(inuvationToken);
+        path[1] = WETH;
 
-    //     assert(joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    //     assert(dev.try_modifyBlacklist(address(gogeToken), address(32), true));
-    //     assert(!joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    // }
+        // Get Quoted amount
+        uint[] memory amounts = IUniswapV2Router01(UNIV2_ROUTER).getAmountsOut( token_amt, path );
 
-    // // This tests blacklisting of the sender.
-    // function test_gogeToken_blacklist_sender() public {
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 100 ether));
+        // return amount
+        return amounts[1];
+    }
 
-    //     assert(joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    //     assert(dev.try_modifyBlacklist(address(gogeToken), address(joe), true));
-    //     assert(!joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    // }
+    // Perform a buy to generate fees
+    function buy_generateFees(uint256 tradeAmt) internal {
+        // approve
+        IERC20(WETH).approve(address(UNIV2_ROUTER), tradeAmt);
 
-    // // This tests that a blacklisted sender can send tokens to a whitelisted receiver.
-    // function test_gogeToken_blacklist_to_whitelist() public {
-    //     // This contract can successfully send assets to address(joe).
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 100 ether));
+        // create path
+        address[] memory path = new address[](2);
+        path[0] = WETH;
+        path[1] = address(inuvationToken);
 
-    //     // Blacklist joe.
-    //     assert(dev.try_modifyBlacklist(address(gogeToken), address(joe), true));
+        // execute buy
+        IUniswapV2Router02(UNIV2_ROUTER).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            tradeAmt,
+            0,
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+    }
 
-    //     // Joe can no longer send tokens to address(32).
-    //     assert(!joe.try_transferToken(address(gogeToken), address(32), 10 ether));
+    // Perform a buy to generate fees
+    function sell_generateFees(uint256 tradeAmt) internal {
+        // approve
+        inuvationToken.approve(address(UNIV2_ROUTER), tradeAmt);
 
-    //     // Whitelist address(32).
-    //     assert(dev.try_excludeFromFees(address(gogeToken), address(32), true));
+        // create path
+        address[] memory path = new address[](2);
+        path[0] = address(inuvationToken);
+        path[1] = WETH;
 
-    //     // Joe can successfully send assets to whitelisted address(32).
-    //     assert(joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    // }
+        // execute sell
+        IUniswapV2Router02(UNIV2_ROUTER).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            tradeAmt,
+            0,
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+    }
 
-    // // This tests that a whitelisted sender can send tokens to a blacklisted receiver.
-    // function test_gogeToken_whitelist_to_blacklist() public {
-    //     // This contract can successfully send assets to address(joe).
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 100 ether));
 
-    //     // Blacklist address(32).
-    //     assert(dev.try_modifyBlacklist(address(gogeToken), address(32), true));
+    // ~~ Unit Tests ~~
 
-    //     // Joe can no longer send tokens to address(32).
-    //     assert(!joe.try_transferToken(address(gogeToken), address(32), 10 ether));
 
-    //     // Whitelist Joe.
-    //     assert(dev.try_excludeFromFees(address(gogeToken), address(joe), true));
+    // Initial state test.
+    function test_inuvationToken_init_state() public {
+        assertEq(inuvationToken.totalSupply(),     100_000_000 * 10 ** inuvationToken.decimals());
+        assertEq(inuvationToken.balanceOf(address(this)), 45_000_000 * 10 ** inuvationToken.decimals());
+        assertEq(inuvationToken.owner(), address(this));
+    }
 
-    //     // Joe can successfully send assets to blacklisted address(32).
-    //     assert(joe.try_transferToken(address(gogeToken), address(32), 10 ether));
-    // }
+    // verify taxed buy
+    function test_inuvationToken_buy_tax() public {
+        inuvationToken.excludeFromFees(address(this), false);
 
-    // // ~ Whitelist testing (excludedFromFees) ~
+        // Verify address(this) is NOT excluded from fees and grab pre balance.
+        assert(!inuvationToken._isExcludedFromFees(address(this)));
+        uint256 preBal = inuvationToken.balanceOf(address(this));
 
-    // // This test case verifies that a whitelisted sender is not taxed when transferring tokens.
-    // function test_gogeToken_whitelist() public {
-    //     // This contract can successfully send assets to address(joe).
-    //     assert(dev.try_transferToken(address(gogeToken), address(joe), 100 ether));
+        // Deposit 10 WETH
+        deal(WETH, address(this), 10 ether);
 
-    //     // Joe sends tokens to address(32).
-    //     assert(joe.try_transferToken(address(gogeToken), address(32), 10 ether));
+        // get quote
+        uint256 amountQuoted = get_quote_tokens(10 ether);
 
-    //     // Post-state check. Address(32) has been taxed 16% on transfer.
-    //     assertEq(gogeToken.balanceOf(address(32)), (10 ether) - ((10 ether) * 16/100));
+        // execute purchase
+        buy_generateFees(10 ether);
 
-    //     // Whitelist joe.
-    //     assert(dev.try_excludeFromFees(address(gogeToken), address(joe), true));
+        // Grab post balanace and calc amount goge tokens received.
+        uint256 postBal        = inuvationToken.balanceOf(address(this));
+        uint256 amountReceived = (postBal - preBal);
+        uint256 taxedAmount    = amountQuoted * 10/100;
 
-    //     // Joe is whitelisted thus sends non-taxed tokens to address(34).
-    //     assert(joe.try_transferToken(address(gogeToken), address(34), 10 ether));
+        uint256 amountForBurn  = taxedAmount * 1/10;
+        uint256 amountForVault = taxedAmount * 9/10;
 
-    //     // Post-state check. Address(34) has NOT been taxed.
-    //     assertEq(gogeToken.balanceOf(address(34)), 10 ether);
-    // }
+        // Verify the quoted amount (minus taxed amount) is the amount received.
+        assertEq(amountQuoted - taxedAmount, amountReceived);
+        withinDiff(taxedAmount, amountForBurn + amountForVault, 1);
+        assertEq(inuvationToken.balanceOf(address(inuvationToken)), amountForVault);
 
-    // // ~ setters ~
+        // Log
+        emit log_named_uint("amount for burn",  amountForBurn);  // 49_863.599163408
+        emit log_named_uint("amount for vault", amountForVault); // 448_772.392470673
+        emit log_named_uint("amount quoted", amountQuoted);      // 4_986_359.916340820
+        emit log_named_uint("amount received", amountReceived);  // 4_487_723.924706738
+        emit log_named_uint("quoted tax", taxedAmount);          // 498_635.991634082
+        emit log_named_uint("actual tax", inuvationToken.balanceOf(address(inuvationToken)));   // 448_772.392470674
+    }
 
-    // // This tests the proper state change when calling setDAO().
-    // function test_gogeToken_setGogeDao() public {
-    //     // Pre-state check. DAO is currently set to address(0) (hasnt been set yet).
-    //     assertEq(gogeToken.gogeDao(), address(0));
+    // verify whitelisted buy
+    function test_inuvationToken_buy_noTax() public {
+        // Verify address(this) is excluded from fees and grab pre balance.
+        assert(inuvationToken._isExcludedFromFees(address(this)));
+        uint256 preBal = inuvationToken.balanceOf(address(this));
 
-    //     // Set DAO to address(32).
-    //     assert(dev.try_setGogeDao(address(gogeToken), address(32)));
+        // Deposit 10 WETH
+        deal(WETH, address(this), 10 ether);
 
-    //     // Post-state check. Verify that gogeDao is set to address(32).
-    //     assertEq(gogeToken.gogeDao(), address(32));
-    // }
+        // get quote
+        uint256 amountQuoted = get_quote_tokens(10 ether);
 
-    // // This tests the proper state changes when calling updateSwapTokensAtAmount().
-    // function test_gogeToken_updateSwapTokensAtAmount() public {
-    //     // Pre-state check. Verify current value of swapTokensAtAmount
-    //     assertEq(gogeToken.swapTokensAtAmount(), 20_000_000 * WAD);
+        // execute purchase
+        buy_generateFees(10 ether);
 
-    //     // Update swapTokensAtAmount
-    //     assert(dev.try_updateSwapTokensAtAmount(address(gogeToken), 1_000_000));
+        // Grab post balanace and calc amount goge tokens received.
+        uint256 postBal        = inuvationToken.balanceOf(address(this));
+        uint256 amountReceived = (postBal - preBal);
 
-    //     // Post-state check. Verify updated value of swapTokensAtAmount
-    //     assertEq(gogeToken.swapTokensAtAmount(), 1_000_000 * WAD);
-    // }
+        // Verify the quoted amount is the amount received and no royalties were generated.
+        assertEq(amountQuoted, amountReceived);
+        assertEq(IERC20(address(inuvationToken)).balanceOf(address(inuvationToken)), 0);
 
-    // // updateFees test
-    // function test_gogeToken_updateFees() public {
-    //     //Pre-state check.
-    //     assertEq(gogeToken.cakeDividendRewardsFee(), 10);
-    //     assertEq(gogeToken.marketingFee(), 2);
-    //     assertEq(gogeToken.buyBackFee(), 2);
-    //     assertEq(gogeToken.teamFee(), 2);
+        // Log
+        emit log_uint(amountQuoted);
+        emit log_uint(amountReceived);
+        emit log_uint(IERC20(address(inuvationToken)).balanceOf(address(inuvationToken)));
+    }
 
-    //     assertEq(gogeToken.totalFees(), 16);
+    // verify taxed buy with fuzzing. Random amounts between .001 ether ($1.4) and 100 ether ($1.4M).
+    // NOTE: maxTx is set to MAX for address(this) thus no limitation on buy amount.
+    function test_inuvationToken_buy_tax_fuzzing_noLimit(uint256 _amount) public {
+        _amount = bound(_amount, 0.001 ether, 1_000 ether);
 
-    //     // Call updateFees
-    //     assert(dev.try_updateFees(address(gogeToken), 14, 6, 3, 3));
+        // Set maxWalletSize and maxTx to MAX and remove address(this) from whitelist
+        inuvationToken.excludeFromFees(address(this), false);
 
-    //     // Post-state check.
-    //     assertEq(gogeToken.cakeDividendRewardsFee(), 14);
-    //     assertEq(gogeToken.marketingFee(), 6);
-    //     assertEq(gogeToken.buyBackFee(), 3);
-    //     assertEq(gogeToken.teamFee(), 3);
+        // Verify address(this) is NOT excluded from fees and grab pre balance
+        assert(!inuvationToken._isExcludedFromFees(address(this)));
+        uint256 preBal = inuvationToken.balanceOf(address(this));
 
-    //     assertEq(gogeToken.totalFees(), 26);
+        // Deposit 10 WETH
+        deal(WETH, address(this), _amount);
 
-    //     // Restriction: Cannot set totalFee to be greater than 40
-    //     assert(!dev.try_updateFees(address(gogeToken), 20, 10, 5, 6)); // 41
-    // }
+        // get quote
+        uint256 amountQuoted = get_quote_tokens(_amount);
 
-    // // setBuyBackEnabled test
-    // function test_gogeToken_setBuyBackEnabled() public {
-    //     // Pre-state check.
-    //     assertEq(gogeToken.buyBackEnabled(), true);
-    //     assertEq(gogeToken.buyBackFee(), 2);
-    //     assertEq(gogeToken.previousBuyBackFee(), 0);
+        // execute purchase
+        buy_generateFees(_amount);
 
-    //     // Disable buyBack
-    //     assert(dev.try_setBuyBackEnabled(address(gogeToken), false));
+        // Grab post balanace and calc amount goge tokens received
+        uint256 postBal        = inuvationToken.balanceOf(address(this));
+        uint256 amountReceived = (postBal - preBal);
+        uint256 taxedAmount    = amountQuoted * 10/100;
 
-    //     //Post-state check.
-    //     assertEq(gogeToken.buyBackEnabled(), false);
-    //     assertEq(gogeToken.buyBackFee(), 0);
-    //     assertEq(gogeToken.previousBuyBackFee(), 2);
-    // }
+        uint256 amountForBurn  = taxedAmount * 1/10;
+        uint256 amountForVault = taxedAmount * 9/10;
 
-    // // setMarketingEnabled test
-    // function test_gogeToken_setMarketingEnabled() public {
-    //     // Pre-state check.
-    //     assertEq(gogeToken.marketingEnabled(), true);
-    //     assertEq(gogeToken.marketingFee(), 2);
-    //     assertEq(gogeToken.previousMarketingFee(), 0);
+        // Verify the quoted amount (minus taxed amount) is the amount received
+        assertEq(amountQuoted - taxedAmount, amountReceived);
+        withinDiff(taxedAmount, amountForBurn + amountForVault, 1);
+        assertEq(inuvationToken.balanceOf(address(inuvationToken)), amountForVault);
 
-    //     // Disable buyBack
-    //     assert(dev.try_setMarketingEnabled(address(gogeToken), false));
+        // Log
+        emit log_named_uint("amount quoted", amountQuoted);
+        emit log_named_uint("amount received", amountReceived);
+        emit log_named_uint("quoted tax", taxedAmount);
+        emit log_named_uint("actual tax", inuvationToken.balanceOf(address(inuvationToken)));
+    }
 
-    //     //Post-state check.
-    //     assertEq(gogeToken.marketingEnabled(), false);
-    //     assertEq(gogeToken.marketingFee(), 0);
-    //     assertEq(gogeToken.previousMarketingFee(), 2);
-    // }
+    // verify taxed sell
+    function test_inuvationToken_sell_tax() public {
+        inuvationToken.excludeFromFees(address(this), false);
 
-    // // setCakeDividendEnabled test
-    // function test_gogeToken_setCakeDividendEnabled() public {
-    //     // Pre-state check.
-    //     assertEq(gogeToken.cakeDividendEnabled(), true);
-    //     assertEq(gogeToken.cakeDividendRewardsFee(), 10);
-    //     assertEq(gogeToken.previousCakeDividendRewardsFee(), 0);
+        // Verify address(this) is NOT excluded from fees and grab pre balance.
+        assert(!inuvationToken._isExcludedFromFees(address(this)));
+        uint256 preBal = IERC20(WETH).balanceOf(address(this));
 
-    //     // Disable buyBack
-    //     assert(dev.try_setCakeDividendEnabled(address(gogeToken), false));
+        // get quote
+        uint256 amountQuoted = get_quote_weth(1_000_000 * NIN);
 
-    //     //Post-state check.
-    //     assertEq(gogeToken.cakeDividendEnabled(), false);
-    //     assertEq(gogeToken.cakeDividendRewardsFee(), 0);
-    //     assertEq(gogeToken.previousCakeDividendRewardsFee(), 10);
-    // }
+        // execute purchase
+        sell_generateFees(1_000_000 * NIN);
 
-    // // setTeamEnabled test
-    // function test_gogeToken_setTeamEnabled() public {
-    //     // Pre-state check.
-    //     assertEq(gogeToken.teamEnabled(), true);
-    //     assertEq(gogeToken.teamFee(), 2);
-    //     assertEq(gogeToken.previousTeamFee(), 0);
+        // Grab post balanace and calc amount goge tokens received.
+        uint256 postBal        = IERC20(WETH).balanceOf(address(this));
+        uint256 amountReceived = (postBal - preBal);
+        uint256 afterTaxAmount = amountQuoted * (100 - 10) / 100;
 
-    //     // Disable buyBack
-    //     assert(dev.try_setTeamEnabled(address(gogeToken), false));
+        uint256 amountForBurn  = afterTaxAmount * 1/10;
+        uint256 amountForVault = afterTaxAmount * 9/10;
 
-    //     //Post-state check.
-    //     assertEq(gogeToken.teamEnabled(), false);
-    //     assertEq(gogeToken.teamFee(), 0);
-    //     assertEq(gogeToken.previousTeamFee(), 2);
-    // }
+        // Verify the quoted amount is the amount received and no royalties were generated.
+        withinDiff(afterTaxAmount, amountReceived, 10 ** 16);
+        assertEq(IERC20(address(inuvationToken)).balanceOf(address(inuvationToken)), (1_000_000 * NIN) * 9 / 100);
 
-    // // safeWithdraw test
-    // function test_gogeToken_safeWithdraw() public {
-    //     // mint BUSD to gogeToken contract
-    //     mint("BUSD", address(gogeToken), 1_000 ether);
+        // Log
+        emit log_named_uint("weth quoted", amountQuoted);
+        emit log_named_uint("weth received", amountReceived);
+        //emit log_named_uint("quoted tax", taxedAmount);
+        emit log_named_uint("actual tax", IERC20(address(inuvationToken)).balanceOf(address(inuvationToken)));
+    }
 
-    //     // Pre-state check.
-    //     assertEq(IERC20(BUSD).balanceOf(address(gogeToken)), 1_000 ether);
-    //     assertEq(IERC20(BUSD).balanceOf(address(dev)), 0);
+    // verify royalty distributions
+    function test_inuvationToken_royalties() public {
+        inuvationToken.excludeFromFees(address(this), false);
 
-    //     // Call safeWithdraw()
-    //     assert(dev.try_safeWithdraw(address(gogeToken), BUSD));
+        // Verify address(this) is NOT excluded from fees and grab pre balance.
+        assert(!inuvationToken._isExcludedFromFees(address(this)));
 
-    //     // Post-state check.
-    //     assertEq(IERC20(BUSD).balanceOf(address(gogeToken)), 0);
-    //     assertEq(IERC20(BUSD).balanceOf(address(dev)), 1_000 ether);
-    // }
+        // Check balance of address(inuvationToken) to see how many tokens have been taxed. Should be 0
+        assertEq(IERC20(address(inuvationToken)).balanceOf(address(inuvationToken)), 0);
+
+        // Deposit 10 WETH
+        deal(WETH, address(this), 10 ether);
+
+        // Generate a buy - log amount of tokens accrued
+        buy_generateFees(10 ether);
+        emit log_named_uint("royalty balance post buy", IERC20(address(inuvationToken)).balanceOf(address(inuvationToken))); // 448_772.392470673
+        uint256 royaltiesToDistribute = IERC20(address(inuvationToken)).balanceOf(address(inuvationToken));
+
+        // get pre balance of 4 actors
+        uint256 preBalJoe = address(joe).balance;
+        uint256 preBalJon = address(jon).balance;
+        uint256 preBalNik = address(nik).balance;
+        uint256 preBalTim = address(tim).balance;
+
+        sell_generateFees(100_000 * NIN);
+        emit log_named_uint("royalty balance post sell", IERC20(address(inuvationToken)).balanceOf(address(inuvationToken))); // 9_000.000000000
+
+        // get post balanace of 4 actors
+        uint256 postBalJoe = address(joe).balance;
+        uint256 postBalJon = address(jon).balance;
+        uint256 postBalNik = address(nik).balance;
+        uint256 postBalTim = address(tim).balance;
+
+        uint256 amountReceivedJoe = postBalJoe - preBalJoe;
+        uint256 amountReceivedJon = postBalJon - preBalJon;
+        uint256 amountReceivedNik = postBalNik - preBalNik;
+        uint256 amountReceivedTim = postBalTim - preBalTim;
+
+        assertGt(postBalJoe, preBalJoe);
+        
+        // ensure they all add up to royaltiesToDistribute
+        //assertEq(amountReceivedJoe + amountReceivedJon + amountReceivedNik + amountReceivedTim, royaltiesToDistribute);
+        // ensure they're all 1/4 of royaltiesToDistribute
+
+    }
 
 }

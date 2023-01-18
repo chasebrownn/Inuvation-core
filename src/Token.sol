@@ -442,16 +442,16 @@ contract Inuvation is ERC20, Ownable {
     uint256 public walletDigit;
     uint256 public transDigit;
     uint256 public delayDigit;
-    mapping (address => bool) private _isExcludedFromFees;
+    mapping (address => bool) public _isExcludedFromFees;
     mapping (address => bool) public _isExcludedMaxTransactionAmount;
     mapping (address => bool) public automatedMarketMakerPairs;
-    mapping(address => bool) public bots;
+    mapping (address => bool) public bots;
     mapping (address => bool) public floorControl;
     event UpdateUniswapV2Router(address indexed newAddress, address indexed oldAddress);
     event ExcludeFromFees(address indexed account, bool isExcluded);
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
 
-     struct Distribution {
+    struct Distribution {
         uint256 utility1;
         uint256 utility2;
         uint256 utility3;
@@ -465,17 +465,16 @@ contract Inuvation is ERC20, Ownable {
         utility2Address = utility2Addr;
         utility3Address = utility3Addr;
         utility4Address = utility4Addr;
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        excludeFromMaxTransaction(address(_uniswapV2Router), true);
-        uniswapV2Router = _uniswapV2Router;
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        excludeFromMaxTransaction(address(uniswapV2Pair), true);
+
+        uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
         _setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
+
         uint256 _buyBurnFee = 1;
         uint256 _buyVaultFee = 9;
         uint256 _sellBurnFee = 1;
         uint256 _sellVaultFee = 9;
-        uint256 totalSupply = 20000000000 * 10**_decimals;
+        uint256 totalSupply = 100_000_000 * 10**_decimals;
         supply += totalSupply;
         walletDigit = 1;
         transDigit = 1;
@@ -489,6 +488,7 @@ contract Inuvation is ERC20, Ownable {
         sellBurnFee = _sellBurnFee;
         sellVaultFee = _sellVaultFee;
         sellTotalFees = sellBurnFee + sellVaultFee;
+
         excludeFromFees(owner(), true);
         excludeFromFees(address(this), true);
         excludeFromFees(address(0xdead), true);
@@ -496,6 +496,7 @@ contract Inuvation is ERC20, Ownable {
         excludeFromFees(address(utility2Address), true);
         excludeFromFees(address(utility3Address), true);
         excludeFromFees(address(utility4Address), true);
+
         excludeFromMaxTransaction(owner(), true);
         excludeFromMaxTransaction(address(this), true);
         excludeFromMaxTransaction(address(0xdead), true);
@@ -503,6 +504,9 @@ contract Inuvation is ERC20, Ownable {
         excludeFromMaxTransaction(address(utility2Address), true);
         excludeFromMaxTransaction(address(utility3Address), true);
         excludeFromMaxTransaction(address(utility4Address), true);
+        excludeFromMaxTransaction(address(uniswapV2Router), true);
+        excludeFromMaxTransaction(address(uniswapV2Pair), true);
+
         distribution = Distribution(25, 25, 25, 25);
         _approve(owner(), address(uniswapV2Router), totalSupply);
         _mint(msg.sender, totalSupply);
@@ -528,7 +532,7 @@ contract Inuvation is ERC20, Ownable {
 
     function unblockBot(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                  delete bots[accounts[i]];
+            delete bots[accounts[i]];
         }
     }
 
@@ -566,7 +570,7 @@ contract Inuvation is ERC20, Ownable {
 
     function excludeFromMaxTransactionRemove(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                  delete _isExcludedMaxTransactionAmount[accounts[i]];
+            delete _isExcludedMaxTransactionAmount[accounts[i]];
         }
     }
 
@@ -639,7 +643,8 @@ contract Inuvation is ERC20, Ownable {
         return _isExcludedFromFees[account];
     }
 
-     function setDistribution(uint256 utility1, uint256 utility2, uint256 utility3, uint256 utility4) external onlyOwner {        
+     function setDistribution(uint256 utility1, uint256 utility2, uint256 utility3, uint256 utility4) external onlyOwner {      
+        require(utility1 + utility2 + utility3 + utility4 == 100, "Sum must equal 100");
         distribution.utility1 = utility1;
         distribution.utility2 = utility2;
         distribution.utility3 = utility3;
@@ -709,13 +714,13 @@ contract Inuvation is ERC20, Ownable {
         if(takeFee){
             if (automatedMarketMakerPairs[to] && sellTotalFees > 0){
                 fees = amount.mul(sellTotalFees).div(100);
-                tokensForBurn += fees * sellBurnFee / sellTotalFees;
                 tokensForVault += fees * sellVaultFee / sellTotalFees;
+                tokensForBurn += fees - tokensForVault;
             }
             else if(automatedMarketMakerPairs[from] && buyTotalFees > 0) {
         	    fees = amount.mul(buyTotalFees).div(100);
-        	    tokensForBurn += fees * buyBurnFee / buyTotalFees;
                 tokensForVault += fees * buyVaultFee / buyTotalFees;
+        	    tokensForBurn += fees - tokensForVault;
             }
             if(fees > 0){    
                 super._transfer(from, address(this), fees);
