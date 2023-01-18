@@ -16,4 +16,7 @@ contract Actor {
     //     (ok,) = address(token).call(abi.encodeWithSignature(sig, to, amt));
     // }
 
+    receive() external payable {
+  	}
+
 }

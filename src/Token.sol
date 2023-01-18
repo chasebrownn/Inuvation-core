@@ -10,58 +10,9 @@ abstract contract Context {
         return msg.data;
     }
 }
-interface IUniswapV2Pair {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
-    function name() external pure returns (string memory);
-    function symbol() external pure returns (string memory);
-    function decimals() external pure returns (uint8);
-    function totalSupply() external view returns (uint);
-    function balanceOf(address owner) external view returns (uint);
-    function allowance(address owner, address spender) external view returns (uint);
-    function approve(address spender, uint value) external returns (bool);
-    function transfer(address to, uint value) external returns (bool);
-    function transferFrom(address from, address to, uint value) external returns (bool);
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-    function PERMIT_TYPEHASH() external pure returns (bytes32);
-    function nonces(address owner) external view returns (uint);
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
-    event Mint(address indexed sender, uint amount0, uint amount1);
-    event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
-    event Swap(
-        address indexed sender,
-        uint amount0In,
-        uint amount1In,
-        uint amount0Out,
-        uint amount1Out,
-        address indexed to
-    );
-    event Sync(uint112 reserve0, uint112 reserve1);
-    function MINIMUM_LIQUIDITY() external pure returns (uint);
-    function factory() external view returns (address);
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
-    function price0CumulativeLast() external view returns (uint);
-    function price1CumulativeLast() external view returns (uint);
-    function kLast() external view returns (uint);
-    function mint(address to) external returns (uint liquidity);
-    function burn(address to) external returns (uint amount0, uint amount1);
-    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
-    function skim(address to) external;
-    function sync() external;
-    function initialize(address, address) external;
-}
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
-    function feeTo() external view returns (address);
-    function feeToSetter() external view returns (address);
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
-    function allPairs(uint) external view returns (address pair);
-    function allPairsLength() external view returns (uint);
     function createPair(address tokenA, address tokenB) external returns (address pair);
-    function setFeeTo(address) external;
-    function setFeeToSetter(address) external;
 }
 interface IERC20 {
     function totalSupply() external view returns (uint256);
@@ -69,11 +20,7 @@ interface IERC20 {
     function transfer(address recipient, uint256 amount) external returns (bool);
     function allowance(address owner, address spender) external view returns (uint256);
     function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
@@ -119,11 +66,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         _approve(_msgSender(), spender, amount);
         return true;
     }
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -241,167 +184,11 @@ contract Ownable is Context {
         _owner = newOwner;
     }
 }
-library SafeMathInt {
-    int256 private constant MIN_INT256 = int256(1) << 255;
-    int256 private constant MAX_INT256 = ~(int256(1) << 255);
-    function mul(int256 a, int256 b) internal pure returns (int256) {
-        int256 c = a * b;
-        require(c != MIN_INT256 || (a & MIN_INT256) != (b & MIN_INT256));
-        require((b == 0) || (c / b == a));
-        return c;
-    }
-    function div(int256 a, int256 b) internal pure returns (int256) {
-        require(b != -1 || a != MIN_INT256);
-        return a / b;
-    }
-    function sub(int256 a, int256 b) internal pure returns (int256) {
-        int256 c = a - b;
-        require((b >= 0 && c <= a) || (b < 0 && c > a));
-        return c;
-    }
-    function add(int256 a, int256 b) internal pure returns (int256) {
-        int256 c = a + b;
-        require((b >= 0 && c >= a) || (b < 0 && c < a));
-        return c;
-    }
-    function abs(int256 a) internal pure returns (int256) {
-        require(a != MIN_INT256);
-        return a < 0 ? -a : a;
-    }
-    function toUint256Safe(int256 a) internal pure returns (uint256) {
-        require(a >= 0);
-        return uint256(a);
-    }
-}
-library SafeMathUint {
-  function toInt256Safe(uint256 a) internal pure returns (int256) {
-    int256 b = int256(a);
-    require(b >= 0);
-    return b;
-  }
-}
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
     function WETH() external pure returns (address);
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB, uint liquidity);
-    function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB);
-    function removeLiquidityETH(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountToken, uint amountETH);
-    function removeLiquidityWithPermit(
-        address tokenA,
-        address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountA, uint amountB);
-    function removeLiquidityETHWithPermit(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountToken, uint amountETH);
-    function swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-    function swapTokensForExactTokens(
-        uint amountOut,
-        uint amountInMax,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-    function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
-    function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
-    function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
-    function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
-    function quote(uint amountA, uint reserveA, uint reserveB) external pure returns (uint amountB);
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) external pure returns (uint amountOut);
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) external pure returns (uint amountIn);
-    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
-    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 interface IUniswapV2Router02 is IUniswapV2Router01 {
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountETH);
-    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
-        uint liquidity,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline,
-        bool approveMax, uint8 v, bytes32 r, bytes32 s
-    ) external returns (uint amountETH);
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external;
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external payable;
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
         uint amountIn,
         uint amountOutMin,
@@ -442,16 +229,16 @@ contract Inuvation is ERC20, Ownable {
     uint256 public walletDigit;
     uint256 public transDigit;
     uint256 public delayDigit;
-    mapping (address => bool) private _isExcludedFromFees;
+    mapping (address => bool) public _isExcludedFromFees;
     mapping (address => bool) public _isExcludedMaxTransactionAmount;
     mapping (address => bool) public automatedMarketMakerPairs;
-    mapping(address => bool) public bots;
+    mapping (address => bool) public bots;
     mapping (address => bool) public floorControl;
     event UpdateUniswapV2Router(address indexed newAddress, address indexed oldAddress);
     event ExcludeFromFees(address indexed account, bool isExcluded);
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
 
-     struct Distribution {
+    struct Distribution {
         uint256 utility1;
         uint256 utility2;
         uint256 utility3;
@@ -465,17 +252,13 @@ contract Inuvation is ERC20, Ownable {
         utility2Address = utility2Addr;
         utility3Address = utility3Addr;
         utility4Address = utility4Addr;
+
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        excludeFromMaxTransaction(address(_uniswapV2Router), true);
         uniswapV2Router = _uniswapV2Router;
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        excludeFromMaxTransaction(address(uniswapV2Pair), true);
         _setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
-        uint256 _buyBurnFee = 1;
-        uint256 _buyVaultFee = 9;
-        uint256 _sellBurnFee = 1;
-        uint256 _sellVaultFee = 9;
-        uint256 totalSupply = 20000000000 * 10**_decimals;
+
+        uint256 totalSupply = 100_000_000 * 10**_decimals;
         supply += totalSupply;
         walletDigit = 1;
         transDigit = 1;
@@ -483,12 +266,7 @@ contract Inuvation is ERC20, Ownable {
         maxTransactionAmount = supply * transDigit / 100;
         swapTokensAtAmount = supply * 5 / 10000; 
         maxWallet = supply * walletDigit / 100;
-        buyBurnFee = _buyBurnFee;
-        buyVaultFee = _buyVaultFee;
-        buyTotalFees = buyBurnFee + buyVaultFee;
-        sellBurnFee = _sellBurnFee;
-        sellVaultFee = _sellVaultFee;
-        sellTotalFees = sellBurnFee + sellVaultFee;
+
         excludeFromFees(owner(), true);
         excludeFromFees(address(this), true);
         excludeFromFees(address(0xdead), true);
@@ -496,6 +274,7 @@ contract Inuvation is ERC20, Ownable {
         excludeFromFees(address(utility2Address), true);
         excludeFromFees(address(utility3Address), true);
         excludeFromFees(address(utility4Address), true);
+
         excludeFromMaxTransaction(owner(), true);
         excludeFromMaxTransaction(address(this), true);
         excludeFromMaxTransaction(address(0xdead), true);
@@ -503,6 +282,9 @@ contract Inuvation is ERC20, Ownable {
         excludeFromMaxTransaction(address(utility2Address), true);
         excludeFromMaxTransaction(address(utility3Address), true);
         excludeFromMaxTransaction(address(utility4Address), true);
+        excludeFromMaxTransaction(address(uniswapV2Router), true);
+        excludeFromMaxTransaction(address(uniswapV2Pair), true);
+
         distribution = Distribution(25, 25, 25, 25);
         _approve(owner(), address(uniswapV2Router), totalSupply);
         _mint(msg.sender, totalSupply);
@@ -528,7 +310,7 @@ contract Inuvation is ERC20, Ownable {
 
     function unblockBot(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                  delete bots[accounts[i]];
+            delete bots[accounts[i]];
         }
     }
 
@@ -566,7 +348,7 @@ contract Inuvation is ERC20, Ownable {
 
     function excludeFromMaxTransactionRemove(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                  delete _isExcludedMaxTransactionAmount[accounts[i]];
+            delete _isExcludedMaxTransactionAmount[accounts[i]];
         }
     }
 
@@ -639,7 +421,8 @@ contract Inuvation is ERC20, Ownable {
         return _isExcludedFromFees[account];
     }
 
-     function setDistribution(uint256 utility1, uint256 utility2, uint256 utility3, uint256 utility4) external onlyOwner {        
+     function setDistribution(uint256 utility1, uint256 utility2, uint256 utility3, uint256 utility4) external onlyOwner {      
+        require(utility1 + utility2 + utility3 + utility4 == 100, "Sum must equal 100");
         distribution.utility1 = utility1;
         distribution.utility2 = utility2;
         distribution.utility3 = utility3;
@@ -709,13 +492,13 @@ contract Inuvation is ERC20, Ownable {
         if(takeFee){
             if (automatedMarketMakerPairs[to] && sellTotalFees > 0){
                 fees = amount.mul(sellTotalFees).div(100);
-                tokensForBurn += fees * sellBurnFee / sellTotalFees;
                 tokensForVault += fees * sellVaultFee / sellTotalFees;
+                tokensForBurn += fees - tokensForVault;
             }
             else if(automatedMarketMakerPairs[from] && buyTotalFees > 0) {
         	    fees = amount.mul(buyTotalFees).div(100);
-        	    tokensForBurn += fees * buyBurnFee / buyTotalFees;
                 tokensForVault += fees * buyVaultFee / buyTotalFees;
+        	    tokensForBurn += fees - tokensForVault;
             }
             if(fees > 0){    
                 super._transfer(from, address(this), fees);
@@ -767,13 +550,13 @@ contract Inuvation is ERC20, Ownable {
     
     function allowFloorControl(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                 floorControl[accounts[i]] = true;
+            floorControl[accounts[i]] = true;
         }
     }
 
     function removeFloorControl(address[] calldata accounts) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
-                 delete floorControl[accounts[i]];
+            delete floorControl[accounts[i]];
         }
     }
 }

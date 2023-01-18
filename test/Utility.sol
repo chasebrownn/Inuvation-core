@@ -33,14 +33,18 @@ contract Utility is DSTest {
     /**********************************/
     /*** Mainnet Contract Addresses ***/
     /**********************************/
-    address constant WBNB  = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address constant BUSD  = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3;
-    address constant CAKE  = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
-    address constant BUNY  = 0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51;
+    address constant DAI   = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address constant USDC  = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant USDT  = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address constant FRAX  = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    address constant WETH  = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address constant WBTC  = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address constant TUSD  = 0x0000000000085d4780B73119b644AE5ecd22b376;
 
-    IERC20 constant dai  = IERC20(BUSD);
-    IERC20 constant wbnb = IERC20(WBNB);
-    IERC20 constant cake = IERC20(CAKE);
+    IERC20 constant dai  = IERC20(DAI);
+    IERC20 constant usdc = IERC20(USDC);
+    IERC20 constant weth = IERC20(WETH);
+    IERC20 constant wbtc = IERC20(WBTC);
 
     address constant UNISWAP_V2_ROUTER_02 = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D; // Uniswap V2 Router
     address constant UNISWAP_V2_FACTORY   = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f; // Uniswap V2 factory.
@@ -60,6 +64,7 @@ contract Utility is DSTest {
 
     uint256 constant USD = 10 ** 6;  // USDC precision decimals
     uint256 constant BTC = 10 ** 8;  // WBTC precision decimals
+    uint256 constant NIN = 10 ** 9;
     uint256 constant WAD = 10 ** 18;
     uint256 constant RAY = 10 ** 27;
 
@@ -105,34 +110,23 @@ contract Utility is DSTest {
     /******************************/
     function setUpTokens() public {
 
-        // tokens["USDC"].addr = USDC;
-        // tokens["USDC"].slot = 9;
+        tokens["USDC"].addr = USDC;
+        tokens["USDC"].slot = 9;
 
-        // tokens["DAI"].addr = DAI;
-        // tokens["DAI"].slot = 2;
-        // tokens["DAI"].orcl = 0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9;
+        tokens["DAI"].addr = DAI;
+        tokens["DAI"].slot = 2;
 
-        // tokens["WETH"].addr = WETH;
-        // tokens["WETH"].slot = 3;
-        // tokens["WETH"].orcl = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+        tokens["FRAX"].addr = FRAX;
+        tokens["FRAX"].slot = 0;
 
-        // tokens["WBTC"].addr = WBTC;
-        // tokens["WBTC"].slot = 0;
-        // tokens["WBTC"].orcl = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
+        tokens["USDT"].addr = USDT;
+        tokens["USDT"].slot = 2;
 
-        tokens["WBNB"].addr = WBNB;
-        tokens["WBNB"].slot = 0;
-        tokens["WBNB"].orcl = 0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE;
+        tokens["WETH"].addr = WETH;
+        tokens["WETH"].slot = 3;
 
-        tokens["BUSD"].addr = BUSD;
-        tokens["BUSD"].slot = 1;
-        tokens["BUSD"].orcl = 0xcBb98864Ef56E9042e7d2efef76141f15731B82f;
-
-        tokens["CAKE"].addr = CAKE;
-        tokens["CAKE"].slot = 3;
-        tokens["CAKE"].orcl = 0xB6064eD41d4f67e353768aA239cA86f4F73665a1;
-
-        // NOTE: Slots might be wrong here
+        tokens["WBTC"].addr = WBTC;
+        tokens["WBTC"].slot = 0;
     }
 
     // Manipulate mainnet ERC20 balance.
