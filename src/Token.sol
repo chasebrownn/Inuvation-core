@@ -470,10 +470,6 @@ contract Inuvation is ERC20, Ownable {
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
         _setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
 
-        uint256 _buyBurnFee = 1;
-        uint256 _buyVaultFee = 9;
-        uint256 _sellBurnFee = 1;
-        uint256 _sellVaultFee = 9;
         uint256 totalSupply = 100_000_000 * 10**_decimals;
         supply += totalSupply;
         walletDigit = 1;
@@ -482,12 +478,6 @@ contract Inuvation is ERC20, Ownable {
         maxTransactionAmount = supply * transDigit / 100;
         swapTokensAtAmount = supply * 5 / 10000; 
         maxWallet = supply * walletDigit / 100;
-        buyBurnFee = _buyBurnFee;
-        buyVaultFee = _buyVaultFee;
-        buyTotalFees = buyBurnFee + buyVaultFee;
-        sellBurnFee = _sellBurnFee;
-        sellVaultFee = _sellVaultFee;
-        sellTotalFees = sellBurnFee + sellVaultFee;
 
         excludeFromFees(owner(), true);
         excludeFromFees(address(this), true);

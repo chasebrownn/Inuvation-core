@@ -45,7 +45,13 @@ contract TokenTest is Utility, Test {
             block.timestamp + 300       // Unix timestamp after which the transaction will revert.
         );
 
+        assertEq(inuvationToken.buyTotalFees(), 0);
+        assertEq(inuvationToken.sellTotalFees(), 0);
+
         inuvationToken.enableTrading();
+
+        assertEq(inuvationToken.buyTotalFees(), 10);
+        assertEq(inuvationToken.sellTotalFees(), 10);
     }
 
 
@@ -315,11 +321,14 @@ contract TokenTest is Utility, Test {
         uint256 amountReceivedTim = postBalTim - preBalTim;
 
         assertGt(postBalJoe, preBalJoe);
-        
-        // ensure they all add up to royaltiesToDistribute
-        //assertEq(amountReceivedJoe + amountReceivedJon + amountReceivedNik + amountReceivedTim, royaltiesToDistribute);
-        // ensure they're all 1/4 of royaltiesToDistribute
+        assertGt(postBalJon, preBalJon);
+        assertGt(postBalNik, preBalNik);
+        assertGt(postBalTim, preBalTim);
 
+        emit log_named_uint("amount received Joe", amountReceivedJoe);
+        emit log_named_uint("amount received Jon", amountReceivedJon);
+        emit log_named_uint("amount received Nik", amountReceivedNik);
+        emit log_named_uint("amount received Tim", amountReceivedTim);
     }
 
 }
