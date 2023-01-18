@@ -466,8 +466,11 @@ contract Inuvation is ERC20, Ownable {
         utility3Address = utility3Addr;
         utility4Address = utility4Addr;
 
-        uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        excludeFromMaxTransaction(address(_uniswapV2Router), true);
+        uniswapV2Router = _uniswapV2Router;
+        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
+        excludeFromMaxTransaction(address(uniswapV2Pair), true);
         _setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
 
         uint256 totalSupply = 100_000_000 * 10**_decimals;
